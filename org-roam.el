@@ -137,8 +137,14 @@ Formatter may be a function that takes title as its only argument."
 
 ;;; Database
 ;;;; Options
-(defconst org-roam-db-filename "org-roam.db"
-  "Name of the Org-roam database file.")
+(defcustom org-roam-db-location nil
+  "Location of the Org-roam database.
+If this is non-nil, the Org-roam sqlite database is saved here.
+
+It is the user's responsibility to set this correctly, especially
+when used with multiple Org-roam instances."
+  :type 'string
+  :group 'org-roam)
 
 (defconst org-roam--db-version 1)
 (defconst org-roam--sqlite-available-p
@@ -153,7 +159,8 @@ Formatter may be a function that takes title as its only argument."
 (defun org-roam--get-db ()
   "Return the sqlite db file."
   (interactive "P")
-  (expand-file-name org-roam-db-filename org-roam-directory))
+  (or org-roam-db-location
+      (expand-file-name "org-roam.db" org-roam-directory)))
 
 (defun org-roam--get-db-connection ()
   "Return the database connection, if any."
@@ -775,7 +782,7 @@ applies.
   "Expands the template STR, returning the string.
 This is an extension of org-capture's template expansion.
 
-First, it expands ${var} occurences in STR, using the INFO alist.
+First, it expands ${var} occurrences in STR, using the INFO alist.
 If there is a ${var} with no matching var in the alist, the value
 of var is prompted for via `completing-read'.
 
@@ -1101,10 +1108,11 @@ INFO is an alist containing additional information."
       (let ((org-roam-capture-templates (list (list "d" "daily" 'plain (list 'function #'org-roam--capture-get-point)
                                                     ""
                                                     :immediate-finish t
-                                                    :file-name "${title}"
+                                                    :file-name "${filename}"
                                                     :head "#+TITLE: ${title}")))
             (org-roam--capture-context 'title)
-            (org-roam--capture-info (list (cons 'title title))))
+            (org-roam--capture-info (list (cons 'title title)
+                                          (cons 'filename filename))))
         (add-hook 'org-capture-after-finalize-hook #'org-roam--capture-find-file-h)
         (org-roam-capture)))))
 
@@ -1143,7 +1151,7 @@ INFO is an alist containing additional information."
 
 (defun org-roam--roam-link-face (path)
   "Conditional face for org file links.
-Applies `org-roam-link-face' if PATH correponds to a Roam file."
+Applies `org-roam-link-face' if PATH corresponds to a Roam file."
   (if (org-roam--org-roam-file-p path)
       'org-roam-link
     'org-link))
@@ -1352,7 +1360,7 @@ Valid states are 'visible, 'exists and 'none."
   :group 'org-roam)
 
 (defcustom org-roam-graphviz-extra-options nil
-  "Extra options when contructing the Graphviz graph.
+  "Extra options when constructing the Graphviz graph.
 Example:
  '((\"rankdir\" . \"LR\"))"
   :type '(alist)
